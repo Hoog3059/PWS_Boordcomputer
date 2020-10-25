@@ -1,9 +1,8 @@
-#include <Arduino.h>
+//#define ACCELGYRO
+#define ALTIMETER
 
-void setup() {
-  // put your setup code here, to run once:
-}
-
-void loop() {
-  // put your main code here, to run repeatedly:
-}
+#ifdef ACCELGYRO
+#include "accelgyro.h"
+#elif defined(ALTIMETER)
+#include "altimeter.h"
+#endif
