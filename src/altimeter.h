@@ -5,7 +5,7 @@
 #include <SD.h>
 #include <Adafruit_BMP280.h>
 
-/** Defines different operating modes.
+/** Defines different operating modes for the flightcomputer.
  * NotReady     - The flightcomputer is initializing and is not ready to record flight.
  * Standby      - The flightcomputer is prepared to start recording.
  * Ready        - The flightcomputer is recording and waiting for launch.
@@ -28,7 +28,7 @@ OperatingMode currentMode;
 #define LED_GREEN_PIN 5
 #define LED_BLUE_PIN 6
 
-/** Button **/
+/** Pushbutton options **/
 #define PUSHBUTTON_PIN 2
 #define PUSHBUTTON_MILLIS_THRESHOLD 100
 
@@ -37,7 +37,7 @@ unsigned int buttonStartTime;
 int buttonValue = 0;
 int previousButtonValue = 0;
 
-/** Barometric altimeter: options **/
+/** Barometric altimeter options **/
 Adafruit_BMP280 bmp;
 
 float bmpSeaLevel;
@@ -45,12 +45,12 @@ float bmpSeaLevel;
 float maxAltitude;
 float altitude;
 
-/** SD-Card reader: options **/
+/** SD-Card reader options **/
 #define SD_CHIP_SELECT_PIN 4
 
 File logFile;
 
-/** Parachute trigger: options **/
+/** Parachute trigger options **/
 #define PARACHUTE_SERVO_PIN 9
 
 Servo parachuteServo;
@@ -59,6 +59,7 @@ Servo parachuteServo;
 
 /** Function declarations **/
 void changeOperatingMode(OperatingMode mode);
+void changeStatusLed(int red, int green, int blue);
 void bmpCalibrate();
 
 void setup()
@@ -71,8 +72,7 @@ void setup()
     pinMode(LED_GREEN_PIN, OUTPUT);
     pinMode(LED_BLUE_PIN, OUTPUT);
 
-    digitalWrite(LED_RED_PIN, HIGH);
-    digitalWrite(LED_BLUE_PIN, HIGH);
+    changeStatusLed(HIGH, LOW, HIGH);
 
     parachuteServo.attach(PARACHUTE_SERVO_PIN);
     parachuteServo.write(100);
@@ -119,9 +119,7 @@ void loop()
     buttonValue = digitalRead(PUSHBUTTON_PIN);
     if (buttonValue)
     {
-        digitalWrite(LED_RED_PIN, LOW);
-        digitalWrite(LED_GREEN_PIN, LOW);
-        digitalWrite(LED_BLUE_PIN, LOW);
+        changeStatusLed(LOW, LOW, LOW);
 
         delay(1000);
 
@@ -138,7 +136,7 @@ void loop()
             break;
         default:
             break;
-        }        
+        }
     }
 
     switch (currentMode)
@@ -181,47 +179,44 @@ void changeOperatingMode(OperatingMode mode)
     switch (mode)
     {
     case NotReady:
-        digitalWrite(LED_RED_PIN, HIGH);
-        digitalWrite(LED_GREEN_PIN, LOW);
-        digitalWrite(LED_BLUE_PIN, HIGH);
+        changeStatusLed(HIGH, LOW, HIGH);
         /* TODO:
          * - Set altimeter to standby.
          * - Close file.
          */
         break;
     case Standby:
-        digitalWrite(LED_RED_PIN, LOW);
-        digitalWrite(LED_GREEN_PIN, LOW);
-        digitalWrite(LED_BLUE_PIN, HIGH);
+        changeStatusLed(LOW, LOW, HIGH);
         /* TODO:
          * - Set altimeter to standby.
          * - Close file
          */
         break;
     case Ready:
-        digitalWrite(LED_RED_PIN, LOW);
-        digitalWrite(LED_GREEN_PIN, HIGH);
-        digitalWrite(LED_BLUE_PIN, LOW);
+        changeStatusLed(LOW, HIGH, LOW);
         /* TODO:
          * - Set altimeter to high-sampling mode.
          * - Open file.
          */
         break;
     case Flight:
-        digitalWrite(LED_RED_PIN, LOW);
-        digitalWrite(LED_GREEN_PIN, LOW);
-        digitalWrite(LED_BLUE_PIN, LOW);
+        changeStatusLed(LOW, LOW, LOW);
         /* TODO:
          * - Set altimeter to high-sampling mode.
          */
         break;
     case Error:
-        digitalWrite(LED_RED_PIN, HIGH);
-        digitalWrite(LED_GREEN_PIN, LOW);
-        digitalWrite(LED_BLUE_PIN, LOW);
+        changeStatusLed(HIGH, LOW, LOW);
         while (true)
             ;
     }
+}
+
+void changeStatusLed(int red, int green, int blue)
+{
+    digitalWrite(LED_RED_PIN, red);
+    digitalWrite(LED_GREEN_PIN, green);
+    digitalWrite(LED_BLUE_PIN, blue);
 }
 
 // Calibration for the BMP280
