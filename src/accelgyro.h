@@ -3,9 +3,8 @@
 #include <MPU6050.h>
 #include "Wire.h"
 
+/** AccelGyro options **/
 #pragma region AccelGyro
-#define ACCELGYRO_SCL A5
-#define ACCELGYRO_SDA A4
 
 MPU6050 accelgyro;
 
@@ -19,37 +18,40 @@ MPU6050 accelgyro;
  */
 #define ACCEL_RANGE 3
 #define GYRO_RANGE 3
+
+/** Number of measurements to mean for more accurate measurement. */
 #define ACCELGYRO_SAMPLE_MEAN 20
+
 #define ACCELGYRO_CALIBRATION_BUFFERSIZE 1000
 #define ACCEL_CALIBRATION_DEADZONE 8
 #define GYRO_CALIBRATION_DEADZONE 1
+
+/** Defines which axis forms a right angle with the ground */
 #define ACCEL_X_AXIS_DOWN
 //#define ACCEL_Y_AXIS_DOWN
 //#define ACCEL_Z_AXIS_DOWN
+
+/** If defined, skip calibration. */
 #define ACCELGYRO_NO_CALIBRATION
+/** If defined, calibration offsets will be printed to Serial port */
+#define VERBOSE_CALIBRATION
 
 // Variables to store accelgyro data in.
-int ax, ay, az;
-int gx, gy, gz;
+int16_t ax, ay, az;
+int16_t gx, gy, gz;
 
-long buff_ax, buff_ay, buff_az;
-long buff_gx, buff_gy, buff_gz;
-
-long mean_ax, mean_ay, mean_az;
-long mean_gx, mean_gy, mean_gz;
-
-uint16_t ax_offset, ay_offset, az_offset;
-uint16_t gx_offset, gy_offset, gz_offset;
 #pragma endregion
 
+/** Velocity in m/s */
 double velocity = 0;
+/** Displacement in m */
 double displacement = 0;
 
 unsigned long time;
 unsigned long previousTime;
 
 void calibrateAccelGyro();
-void accelgyroMeanSensors();
+void accelgyroMeanSensors(long *mean_ax, long *mean_ay, long *mean_az, long *mean_gx, long *mean_gy, long *mean_gz);
 
 void setup()
 {
@@ -72,23 +74,6 @@ void setup()
     accelgyro.setFullScaleGyroRange(0);
 
     calibrateAccelGyro();
-
-    Serial.println();
-    Serial.print("OFFSETS    ");
-    Serial.print(ax_offset);
-    Serial.print("    ");
-    Serial.print(ay_offset);
-    Serial.print("    ");
-    Serial.print(az_offset);
-    Serial.print("    ");
-    Serial.print(gx_offset);
-    Serial.print("    ");
-    Serial.print(gy_offset);
-    Serial.print("    ");
-    Serial.print(gz_offset);
-    Serial.println();
-
-    delay(5000);
 #endif
 
     accelgyro.setFullScaleAccelRange(ACCEL_RANGE);
@@ -98,15 +83,7 @@ void setup()
 }
 
 void loop()
-{    
-    int16_t ax_temp;
-    int16_t ay_temp;
-    int16_t az_temp;
-
-    int16_t gx_temp;
-    int16_t gy_temp;
-    int16_t gz_temp;
-
+{
     long buff_ax = 0;
     long buff_ay = 0;
     long buff_az = 0;
@@ -116,21 +93,23 @@ void loop()
 
     for (size_t i = 0; i < ACCELGYRO_SAMPLE_MEAN; i++)
     {
-        accelgyro.getMotion6(&ax_temp, &ay_temp, &az_temp, &gx_temp, &gy_temp, &gz_temp);
+        accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
-        // Acceleration in m/s^2
-        ax = int(ax_temp / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY);
-        ay = int(ay_temp / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY);
-        az = int(az_temp / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY );
-        
+        /** Convert raw acceleration to m/s^2
+         * 
+         */
+        ax = int16_t(ax / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY);
+        ay = int16_t(ay / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY);
+        az = int16_t(az / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY);
+
         buff_ax += ax;
         buff_ay += ay;
         buff_az += az;
 
         // Angular velocity in °/s
-        gx = int(float(gx_temp) / (131.0 / pow(2, GYRO_RANGE)));
-        gy = int(float(gy_temp) / (131.0 / pow(2, GYRO_RANGE)));
-        gz = int(float(gz_temp) / (131.0 / pow(2, GYRO_RANGE)));
+        gx = int16_t(gx / (131.0 / pow(2, GYRO_RANGE)));
+        gy = int16_t(gy / (131.0 / pow(2, GYRO_RANGE)));
+        gz = int16_t(gz / (131.0 / pow(2, GYRO_RANGE)));
 
         buff_gx += gx;
         buff_gy += gy;
@@ -139,29 +118,27 @@ void loop()
         delay(2);
     }
 
-    ax = int(buff_ax / ACCELGYRO_SAMPLE_MEAN);
-    ay = int(buff_ay / ACCELGYRO_SAMPLE_MEAN);
-    az = int(buff_az / ACCELGYRO_SAMPLE_MEAN);
+    ax = buff_ax / ACCELGYRO_SAMPLE_MEAN;
+    ay = buff_ay / ACCELGYRO_SAMPLE_MEAN;
+    az = buff_az / ACCELGYRO_SAMPLE_MEAN;
 
-    gx = int(buff_gx / ACCELGYRO_SAMPLE_MEAN);
-    gy = int(buff_gy / ACCELGYRO_SAMPLE_MEAN);
-    gz = int(buff_gz / ACCELGYRO_SAMPLE_MEAN);
+    gx = buff_gx / ACCELGYRO_SAMPLE_MEAN;
+    gy = buff_gy / ACCELGYRO_SAMPLE_MEAN;
+    gz = buff_gz / ACCELGYRO_SAMPLE_MEAN;
 
     // Correct for gravity
-    ax = int(ax - GRAVITY * 1);
-
-    //Serial.println(ax);
+    ax = int16_t(ax - GRAVITY);
 
     time = millis();
 
     // In m/s
-    velocity = double(velocity + ax * double(time - previousTime) / 1000.0);
-    
+    velocity = velocity + ax * double(time - previousTime) / 1000.0;
+
     // In m
-    displacement = double(displacement + velocity * double(time - previousTime) / 1000.0);
+    displacement = displacement + velocity * double(time - previousTime) / 1000.0;
 
     previousTime = time;
-    
+
     Serial.print(" : ");
     Serial.print(velocity);
     Serial.print(" m/s    ");
@@ -196,7 +173,13 @@ void calibrateAccelGyro()
     accelgyro.setYGyroOffset(0);
     accelgyro.setZGyroOffset(0);
 
-    accelgyroMeanSensors();
+    int ax_offset, ay_offset, az_offset;
+    int gx_offset, gy_offset, gz_offset;
+
+    long mean_ax, mean_ay, mean_az;
+    long mean_gx, mean_gy, mean_gz;
+
+    accelgyroMeanSensors(&mean_ax, &mean_ay, &mean_az, &mean_gx, &mean_gy, &mean_gz);
 
     ax_offset = -mean_ax / 8;
     ay_offset = -mean_ay / 8;
@@ -227,7 +210,7 @@ void calibrateAccelGyro()
         accelgyro.setZGyroOffset(gz_offset);
 
         // Get the mean values from the sensor
-        accelgyroMeanSensors();
+        accelgyroMeanSensors(&mean_ax, &mean_ay, &mean_az, &mean_gx, &mean_gy, &mean_gz);
 
 #ifdef ACCEL_X_AXIS_DOWN
         if (abs(16348 - mean_ax) <= ACCEL_CALIBRATION_DEADZONE)
@@ -294,25 +277,37 @@ void calibrateAccelGyro()
         if (ready == 6)
             break;
     }
+
+#ifdef VERBOSE_CALIBRATION
+    Serial.println();
+    Serial.print("OFFSETS    ");
+    Serial.print(ax_offset);
+    Serial.print("    ");
+    Serial.print(ay_offset);
+    Serial.print("    ");
+    Serial.print(az_offset);
+    Serial.print("    ");
+    Serial.print(gx_offset);
+    Serial.print("    ");
+    Serial.print(gy_offset);
+    Serial.print("    ");
+    Serial.print(gz_offset);
+    Serial.println();
+
+    delay(5000);
+#endif
 }
 
-void accelgyroMeanSensors()
+void accelgyroMeanSensors(long *mean_ax, long *mean_ay, long *mean_az, long *mean_gx, long *mean_gy, long *mean_gz)
 {
+
+    int16_t ax_temp, ay_temp, az_temp;
+    int16_t gx_temp, gy_temp, gz_temp;
+
+    long buff_ax, buff_ay, buff_az;
+    long buff_gx, buff_gy, buff_gz;
+
     int i = 0;
-    int16_t ax_temp;
-    int16_t ay_temp;
-    int16_t az_temp;
-
-    int16_t gx_temp;
-    int16_t gy_temp;
-    int16_t gz_temp;
-    buff_ax = 0;
-    buff_ay = 0;
-    buff_az = 0;
-    buff_gx = 0;
-    buff_gy = 0;
-    buff_gz = 0;
-
     while (i < (ACCELGYRO_CALIBRATION_BUFFERSIZE + 101))
     {
         accelgyro.getMotion6(&ax_temp, &ay_temp, &az_temp, &gx_temp, &gy_temp, &gz_temp);
@@ -328,12 +323,12 @@ void accelgyroMeanSensors()
         }
         if (i == (ACCELGYRO_CALIBRATION_BUFFERSIZE + 100))
         {
-            mean_ax = buff_ax / ACCELGYRO_CALIBRATION_BUFFERSIZE;
-            mean_ay = buff_ay / ACCELGYRO_CALIBRATION_BUFFERSIZE;
-            mean_az = buff_az / ACCELGYRO_CALIBRATION_BUFFERSIZE;
-            mean_gx = buff_gx / ACCELGYRO_CALIBRATION_BUFFERSIZE;
-            mean_gy = buff_gy / ACCELGYRO_CALIBRATION_BUFFERSIZE;
-            mean_gz = buff_gz / ACCELGYRO_CALIBRATION_BUFFERSIZE;
+            *mean_ax = buff_ax / ACCELGYRO_CALIBRATION_BUFFERSIZE;
+            *mean_ay = buff_ay / ACCELGYRO_CALIBRATION_BUFFERSIZE;
+            *mean_az = buff_az / ACCELGYRO_CALIBRATION_BUFFERSIZE;
+            *mean_gx = buff_gx / ACCELGYRO_CALIBRATION_BUFFERSIZE;
+            *mean_gy = buff_gy / ACCELGYRO_CALIBRATION_BUFFERSIZE;
+            *mean_gz = buff_gz / ACCELGYRO_CALIBRATION_BUFFERSIZE;
         }
         i++;
         delay(2); //Needed so we don't get repeated measures

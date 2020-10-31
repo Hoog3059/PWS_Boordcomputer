@@ -6,12 +6,12 @@
 #include <Adafruit_BMP280.h>
 
 /** Defines different operating modes for the flightcomputer.
- * NotReady     - The flightcomputer is initializing and is not ready to record flight.
- * Standby      - The flightcomputer is prepared to start recording.
- * Ready        - The flightcomputer is recording and waiting for launch.
- * Flight       - The flightcomputer has recorded launch and is now logging and waiting for apogee.
- * Error        - An error has occurred and the flightcomputer has stopped recording.
-**/
+ * - NotReady     : The flightcomputer is initializing and is not ready to record flight.
+ * - Standby      : The flightcomputer is prepared to start recording.
+ * - Ready        : The flightcomputer is recording and waiting for launch.
+ * - Flight       : The flightcomputer has recorded launch and is now logging and waiting for apogee.
+ * - Error        : An error has occurred and the flightcomputer has stopped recording.
+*/
 enum OperatingMode
 {
     NotReady,
@@ -21,40 +21,39 @@ enum OperatingMode
     Error
 };
 
-OperatingMode currentMode;
+OperatingMode currentMode = OperatingMode::NotReady;
 
-/** Operating mode status LED pins. **/
+/** Operating mode status LED pins **/
 #define LED_RED_PIN 3
 #define LED_GREEN_PIN 5
 #define LED_BLUE_PIN 6
 
-/** Pushbutton options **/
+/** Pushbutton **/
 #define PUSHBUTTON_PIN 2
-#define PUSHBUTTON_MILLIS_THRESHOLD 100
-
-unsigned int buttonStartTime;
 
 int buttonValue = 0;
-int previousButtonValue = 0;
 
-/** Barometric altimeter options **/
+/** Barometric altimeter **/
 Adafruit_BMP280 bmp;
 
 float bmpSeaLevel; // in hPa
 
-float maxAltitude;
+// In meters
+float maxAltitude = 0;
 float altitude;
 
-/** SD-Card reader options **/
+/** SD-Card reader **/
 #define SD_CHIP_SELECT_PIN 4
 
 File logFile;
 
-/** Parachute trigger options **/
+/** Parachute trigger **/
 #define PARACHUTE_SERVO_PIN 9
 
 Servo parachuteServo;
 
+/** Trigger thresholds **/
+// In meters
 #define LAUNCH_ALTITUDE_TRIGGER_THRESHOLD 5
 #define PARACHUTE_ALTITUDE_TRIGGER_THRESHOLD 5
 
@@ -68,8 +67,6 @@ void bmpCalibrate();
 
 void setup()
 {
-    currentMode = OperatingMode::NotReady;
-
     pinMode(PUSHBUTTON_PIN, INPUT);
 
     pinMode(LED_RED_PIN, OUTPUT);
@@ -79,17 +76,9 @@ void setup()
     changeStatusLed(HIGH, LOW, HIGH);
 
     parachuteServo.attach(PARACHUTE_SERVO_PIN);
-    parachuteServo.write(100);
+    parachuteServo.write(10);
 
-    if (bmp.begin(0x76))
-    {
-        bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,
-                        Adafruit_BMP280::SAMPLING_X1,
-                        Adafruit_BMP280::SAMPLING_X16,
-                        Adafruit_BMP280::FILTER_X16,
-                        Adafruit_BMP280::STANDBY_MS_1);
-    }
-    else
+    if (!bmp.begin(0x76))
     {
         changeOperatingMode(OperatingMode::Error);
     }
@@ -119,6 +108,7 @@ void setup()
 
 void loop()
 {
+    // Check for button press. Change current mode.
     buttonValue = digitalRead(PUSHBUTTON_PIN);
     if (buttonValue)
     {
@@ -137,16 +127,12 @@ void loop()
         case Flight:
             changeOperatingMode(OperatingMode::Standby);
             break;
-        default:
-            break;
         }
     }
 
+    // Routines for different operating modes.
     switch (currentMode)
     {
-    case NotReady:
-        // Process
-        break;
     case Standby:
         // Process
         break;
@@ -164,7 +150,7 @@ void loop()
         }
         else if (maxAltitude - altitude >= PARACHUTE_ALTITUDE_TRIGGER_THRESHOLD)
         {
-            // TODO: Trigger parachute
+            parachuteServo.write(170);
         }
 
         // time;barometricAltitude
