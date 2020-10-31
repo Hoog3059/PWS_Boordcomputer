@@ -40,7 +40,7 @@ int previousButtonValue = 0;
 /** Barometric altimeter options **/
 Adafruit_BMP280 bmp;
 
-float bmpSeaLevel;
+float bmpSeaLevel; // in hPa
 
 float maxAltitude;
 float altitude;
@@ -55,7 +55,11 @@ File logFile;
 
 Servo parachuteServo;
 
+#define LAUNCH_ALTITUDE_TRIGGER_THRESHOLD 5
 #define PARACHUTE_ALTITUDE_TRIGGER_THRESHOLD 5
+
+/** Mission time **/
+unsigned long startTime;
 
 /** Function declarations **/
 void changeOperatingMode(OperatingMode mode);
@@ -77,19 +81,18 @@ void setup()
     parachuteServo.attach(PARACHUTE_SERVO_PIN);
     parachuteServo.write(100);
 
-    /*
-    if (bmp.begin())
+    if (bmp.begin(0x76))
     {
         bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,
                         Adafruit_BMP280::SAMPLING_X1,
                         Adafruit_BMP280::SAMPLING_X16,
                         Adafruit_BMP280::FILTER_X16,
-                        Adafruit_BMP280::STANDBY_MS_1000);
+                        Adafruit_BMP280::STANDBY_MS_1);
     }
     else
     {
         changeOperatingMode(OperatingMode::Error);
-    }*/
+    }
 
     if (SD.begin(SD_CHIP_SELECT_PIN))
     {
@@ -129,7 +132,7 @@ void loop()
             changeOperatingMode(OperatingMode::Ready);
             break;
         case Ready:
-            changeOperatingMode(OperatingMode::Standby);
+            changeOperatingMode(OperatingMode::Flight);
             break;
         case Flight:
             changeOperatingMode(OperatingMode::Standby);
@@ -149,6 +152,9 @@ void loop()
         break;
     case Ready:
         // Wait for launch
+        if(altitude > LAUNCH_ALTITUDE_TRIGGER_THRESHOLD){
+            changeOperatingMode(OperatingMode::Flight);
+        }
         break;
     case Flight:
         altitude = bmp.readAltitude(bmpSeaLevel);
@@ -161,7 +167,11 @@ void loop()
             // TODO: Trigger parachute
         }
 
+        // time;barometricAltitude
         // TODO: Log altitude
+        logFile.print(millis() - startTime);
+        logFile.print(";");
+        logFile.println(altitude);
         break;
     case Error:
         changeOperatingMode(OperatingMode::Error);
@@ -178,32 +188,41 @@ void changeOperatingMode(OperatingMode mode)
     currentMode = mode;
     switch (mode)
     {
-    case NotReady:
-        changeStatusLed(HIGH, LOW, HIGH);
-        /* TODO:
-         * - Set altimeter to standby.
-         * - Close file.
-         */
-        break;
     case Standby:
         changeStatusLed(LOW, LOW, HIGH);
-        /* TODO:
-         * - Set altimeter to standby.
-         * - Close file
-         */
+
+        logFile.close();
+
+        bmp.setSampling(Adafruit_BMP280::MODE_SLEEP,
+                        Adafruit_BMP280::SAMPLING_NONE,
+                        Adafruit_BMP280::SAMPLING_NONE,
+                        Adafruit_BMP280::FILTER_X16,
+                        Adafruit_BMP280::STANDBY_MS_1000);
         break;
     case Ready:
+        logFile = SD.open("ROCKET_1.txt", FILE_WRITE);
+
+        if (!logFile)
+        {
+            changeOperatingMode(OperatingMode::Error);
+        }
+
+        bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,
+                        Adafruit_BMP280::SAMPLING_NONE,
+                        Adafruit_BMP280::SAMPLING_X16,
+                        Adafruit_BMP280::FILTER_X16,
+                        Adafruit_BMP280::STANDBY_MS_1);
+        
+        delay(1000);
+        
+        bmpCalibrate();
+        
         changeStatusLed(LOW, HIGH, LOW);
-        /* TODO:
-         * - Set altimeter to high-sampling mode.
-         * - Open file.
-         */
         break;
     case Flight:
         changeStatusLed(LOW, LOW, LOW);
-        /* TODO:
-         * - Set altimeter to high-sampling mode.
-         */
+
+        startTime = millis();
         break;
     case Error:
         changeStatusLed(HIGH, LOW, LOW);
@@ -222,5 +241,5 @@ void changeStatusLed(int red, int green, int blue)
 // Calibration for the BMP280
 void bmpCalibrate()
 {
-    bmpSeaLevel = bmp.readPressure();
+    bmpSeaLevel = bmp.readPressure() / 100;
 }
