@@ -31,8 +31,6 @@ OperatingMode currentMode = OperatingMode::NotReady;
 /** Pushbutton **/
 #define PUSHBUTTON_PIN 2
 
-int buttonValue = 0;
-
 /** Barometric altimeter **/
 Adafruit_BMP280 bmp;
 
@@ -109,8 +107,7 @@ void setup()
 void loop()
 {
     // Check for button press. Change current mode.
-    buttonValue = digitalRead(PUSHBUTTON_PIN);
-    if (buttonValue)
+    if (digitalRead(PUSHBUTTON_PIN);)
     {
         changeStatusLed(LOW, LOW, LOW);
 
