@@ -107,7 +107,7 @@ void setup()
 void loop()
 {
     // Check for button press. Change current mode.
-    if (digitalRead(PUSHBUTTON_PIN);)
+    if (digitalRead(PUSHBUTTON_PIN))
     {
         changeStatusLed(LOW, LOW, LOW);
 
