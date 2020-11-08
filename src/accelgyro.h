@@ -46,6 +46,8 @@ int16_t gx, gy, gz;
 double velocity = 0;
 /** Displacement in m */
 double displacement = 0;
+/** Rotation from 90° from the ground */
+double rotation = 0;
 
 unsigned long time;
 unsigned long previousTime;
@@ -63,12 +65,12 @@ void setup()
     Serial.println(accelgyro.testConnection() ? "MPU6050 connection successful" : "MPU6050 connection failed");
 
 #ifdef ACCELGYRO_NO_CALIBRATION
-    accelgyro.setXAccelOffset(62515);
-    accelgyro.setYAccelOffset(1530);
-    accelgyro.setZAccelOffset(1522);
-    accelgyro.setXGyroOffset(73);
-    accelgyro.setYGyroOffset(38);
-    accelgyro.setZGyroOffset(65456);
+    accelgyro.setXAccelOffset(-3015);
+    accelgyro.setYAccelOffset(1571);
+    accelgyro.setZAccelOffset(1536);
+    accelgyro.setXGyroOffset(66);
+    accelgyro.setYGyroOffset(35);
+    accelgyro.setZGyroOffset(-76);
 #else
     accelgyro.setFullScaleAccelRange(0);
     accelgyro.setFullScaleGyroRange(0);
