@@ -4,6 +4,7 @@
 //#define ALTIMETER
 //#define ALTIMETER_TEST
 #define FINAL
+//#define TEST
 
 #ifdef ACCELGYRO
 #include "accelgyro.h"
@@ -17,4 +18,6 @@
 #include "altimeter_test.h"
 #elif defined(FINAL)
 #include "final.h"
+#elif defined(TEST)
+#include "test.h"
 #endif
