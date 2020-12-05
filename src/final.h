@@ -1,11 +1,11 @@
 #include <Arduino.h>
-#include <Servo.h>
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
-#include <I2Cdev.h>
-#include <MPU6050.h>
-#include <Adafruit_BMP280.h>
+#include <Servo.h> // https://github.com/arduino-libraries/Servo
+#include <I2Cdev.h> // https://github.com/jrowberg/i2cdevlib
+#include <MPU6050.h> // https://github.com/pkourany/I2CDEV_MPU6050
+#include <Adafruit_BMP280.h> // https://github.com/adafruit/Adafruit_BMP280_Library
 
 /** Defines different operating modes for the flightcomputer.
  * - NotReady     : The flightcomputer is initializing and is not ready to record flight.
@@ -27,9 +27,9 @@ OperatingMode currentMode = OperatingMode::NotReady;
 
 #pragma region LED_AND_BUTTON
 /** Operating mode status LED pins **/
-#define LED_RED_PIN 3
+#define LED_RED_PIN 7
 #define LED_GREEN_PIN 5
-#define LED_BLUE_PIN 6
+#define LED_BLUE_PIN 4
 
 /** Pushbutton **/
 #define PUSHBUTTON_PIN 2
@@ -87,7 +87,7 @@ unsigned long previousTime;
 
 #pragma region SD_CARD
 /** SD-Card reader **/
-#define SD_CHIP_SELECT_PIN 4
+#define SD_CHIP_SELECT_PIN 10
 
 File logFile;
 #pragma endregion

@@ -41,7 +41,7 @@ float maxAltitude = 0;
 float altitude;
 
 /** SD-Card reader **/
-#define SD_CHIP_SELECT_PIN 4
+#define SD_CHIP_SELECT_PIN 10
 
 File logFile;
 
