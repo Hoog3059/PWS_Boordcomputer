@@ -2,9 +2,9 @@
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
-#include <Servo.h> // https://github.com/arduino-libraries/Servo
-#include <I2Cdev.h> // https://github.com/jrowberg/i2cdevlib
-#include <MPU6050.h> // https://github.com/pkourany/I2CDEV_MPU6050
+#include <Servo.h>           // https://github.com/arduino-libraries/Servo
+#include <I2Cdev.h>          // https://github.com/jrowberg/i2cdevlib
+#include <MPU6050.h>         // https://github.com/pkourany/I2CDEV_MPU6050
 #include <Adafruit_BMP280.h> // https://github.com/adafruit/Adafruit_BMP280_Library
 
 /** Defines different operating modes for the flightcomputer.
@@ -65,21 +65,20 @@ MPU6050 accelgyro;
 #define ACCELGYRO_SAMPLE_MEAN 20
 
 /** Defines which axis forms a right angle with the ground */
-#define ACCEL_X_AXIS_DOWN
+//#define ACCEL_X_AXIS_DOWN
 //#define ACCEL_Y_AXIS_DOWN
-//#define ACCEL_Z_AXIS_DOWN
+#define ACCEL_Z_AXIS_DOWN
 
 // Variables to store accelgyro data in.
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
 
-/** Velocity in m/s */
+// Vertical acceleration (pointer)
+int16_t *av;
+
+/** Velocity in cm/s */
 double velocity = 0;
 double maxVelocity = 0;
-/** Displacement in m */
-double displacement = 0;
-/** Rotation from 90° from the ground */
-double rotation = 0;
 
 unsigned long time;
 unsigned long previousTime;
@@ -105,14 +104,14 @@ bool parachuteDeployed = false;
 /** Launch trigger thresholds **/
 // In meters
 #define LAUNCH_ALTITUDE_TRIGGER_THRESHOLD 5
-// In m/s^2
-#define LAUNCH_ACCELERATION_TRIGGER_THRESHOLD 2
+// In cm/s^2
+#define LAUNCH_ACCELERATION_TRIGGER_THRESHOLD 500
 
 /** Parachute deploy trigger tresholds */
 // In meters
 #define PARACHUTE_ALTITUDE_TRIGGER_THRESHOLD 5
-// In m/s
-#define PARACHUTE_VELOCITY_TRIGGER_THRESHOLD 1
+// In cm/s
+#define PARACHUTE_VELOCITY_TRIGGER_THRESHOLD 100
 #pragma endregion
 
 /** Mission time **/
@@ -146,19 +145,27 @@ void setup()
         changeOperatingMode(OperatingMode::Error);
     }
 
-    accelgyro.setXAccelOffset(-3013);
-    accelgyro.setYAccelOffset(1537);
-    accelgyro.setZAccelOffset(1530);
-    accelgyro.setXGyroOffset(66);
-    accelgyro.setYGyroOffset(35);
-    accelgyro.setZGyroOffset(-74);
+    accelgyro.setXAccelOffset(-2810);
+    accelgyro.setYAccelOffset(1547);
+    accelgyro.setZAccelOffset(1507);
+    accelgyro.setXGyroOffset(51);
+    accelgyro.setYGyroOffset(27);
+    accelgyro.setZGyroOffset(-82);
 
     accelgyro.setFullScaleAccelRange(ACCEL_RANGE);
     accelgyro.setFullScaleGyroRange(GYRO_RANGE);
 
+#ifdef ACCEL_X_AXIS_DOWN
+    av = &ax;
+#elif defined(ACCEL_Y_AXIS_DOWN)
+    av = &ay;
+#elif defined(ACCEL_Z_AXIS_DOWN)
+    av = &az;
+#endif
+
     // Servo initialisation
     parachuteServo.attach(PARACHUTE_SERVO_PIN);
-    parachuteServo.write(10);
+    parachuteServo.write(170);
 
     // Barometer initialisation
     if (!bmp.begin(0x76))
@@ -174,10 +181,21 @@ void setup()
 
     if (SD.exists("ROCKET_1.txt"))
     {
+        // If file already exists, wait for continuation confirmation before deleting file to prevent data loss.        
+        changeStatusLed(HIGH, HIGH, LOW);
+
+        while(!digitalRead(PUSHBUTTON_PIN)){
+            delay(1000);
+        }
+        changeStatusLed(HIGH, LOW, HIGH);
+        delay(2000);        
         SD.remove("ROCKET_1.txt");
     }
 
     logFile = SD.open("ROCKET_1.txt", FILE_WRITE);
+
+    logFile.println("t;ax;ay;az;gx;gy;gz;v;h");
+    logFile.println("ms;cm/s^2;cm/s^2;cm/s^2;deg/s;deg/s;deg/s;cm/s;m");
 
     if (!logFile)
     {
@@ -223,10 +241,19 @@ void loop()
 
         time = millis();
 
-        // In m/s
-        velocity = velocity + ax * double(time - previousTime) / 1000.0;
-        // In m
-        // displacement = displacement + velocity * double(time - previousTime) / 1000.0;
+        if (currentMode == OperatingMode::Flight)
+        {
+            // In cm/s
+            velocity = velocity + (*av) * double(time - previousTime) / 1000.0;
+        }else if (currentMode == OperatingMode::Ready)
+        {
+            // Check if launch detected, otherwise break;
+            if (/*altitude > LAUNCH_ALTITUDE_TRIGGER_THRESHOLD || */ (*av) >= LAUNCH_ACCELERATION_TRIGGER_THRESHOLD)
+            {
+                changeOperatingMode(OperatingMode::Flight);
+                velocity = velocity + (*av) * double(time - previousTime) / 1000.0;
+            }
+        }
 
         previousTime = time;
 
@@ -250,18 +277,8 @@ void loop()
         logFile.print(";");
         logFile.println(altitude);
 
-        if (currentMode == OperatingMode::Ready)
-        {
-            // Check if launch detected, otherwise break;
-            if (altitude > LAUNCH_ALTITUDE_TRIGGER_THRESHOLD || ax >= LAUNCH_ACCELERATION_TRIGGER_THRESHOLD)
-            {
-                changeOperatingMode(OperatingMode::Flight);
-            }
-            else
-            {
-                break;
-            }
-        }
+        // Code below this line is only for "Flight" mode, so break if not in "Flight" mode.
+        if(currentMode == OperatingMode::Ready) break;
 
         if (altitude > maxAltitude)
         {
@@ -278,15 +295,16 @@ void loop()
         {
             if (velocity < maxVelocity && velocity < PARACHUTE_VELOCITY_TRIGGER_THRESHOLD)
             {
-                parachuteServo.write(170);
+                parachuteServo.write(10);
                 parachuteDeployed = true;
             }
 
+            /*
             if (maxAltitude - altitude >= PARACHUTE_ALTITUDE_TRIGGER_THRESHOLD)
             {
-                parachuteServo.write(170);
+                parachuteServo.write(10);
                 parachuteDeployed = true;
-            }
+            }*/
         }
         break;
     case Error:
@@ -362,7 +380,7 @@ void takeSensorReadings()
     AccelGyroMeanReadings();
 
     // Correct for gravity
-    ax = int16_t(ax - GRAVITY);
+    (*av) = int16_t((*av) - (GRAVITY * 100));
 }
 
 void AccelGyroMeanReadings()
@@ -378,12 +396,12 @@ void AccelGyroMeanReadings()
     {
         accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
-        /** Convert raw acceleration to m/s^2
+        /** Convert raw acceleration to cm/s^2
          * 
          */
-        ax = int16_t(ax / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY);
-        ay = int16_t(ay / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY);
-        az = int16_t(az / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY);
+        ax = int16_t(ax / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY * 100);
+        ay = int16_t(ay / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY * 100);
+        az = int16_t(az / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY * 100);
 
         buff_ax += ax;
         buff_ay += ay;
