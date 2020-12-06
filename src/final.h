@@ -50,6 +50,7 @@ float altitude;
 /** Accelgyro */
 MPU6050 accelgyro;
 
+// In m/s^2
 #define GRAVITY 9.806
 
 /* Accel range
@@ -59,6 +60,12 @@ MPU6050 accelgyro;
  * 3 = +/- 16g
  */
 #define ACCEL_RANGE 3
+/* Gyro range
+ * 0 = +/- 250 °/sec
+ * 1 = +/- 500 °/sec
+ * 2 = +/- 1000 °/sec
+ * 3 = +/- 2000 °/sec
+ */
 #define GYRO_RANGE 3
 
 /** Number of measurements to mean for more accurate measurement. */
@@ -73,13 +80,14 @@ MPU6050 accelgyro;
 int16_t ax, ay, az;
 int16_t gx, gy, gz;
 
-// Vertical acceleration (pointer)
+// Vertical acceleration (pointer).
 int16_t *av;
 
 /** Velocity in cm/s */
 double velocity = 0;
 double maxVelocity = 0;
 
+// Δt used for integration.
 unsigned long time;
 unsigned long previousTime;
 #pragma endregion
@@ -114,7 +122,7 @@ bool parachuteDeployed = false;
 #define PARACHUTE_VELOCITY_TRIGGER_THRESHOLD 100
 #pragma endregion
 
-/** Mission time **/
+/** Mission time (in ms from boot of Arduino) - used for documenting t **/
 unsigned long startTime;
 
 /** Function declarations **/
@@ -145,6 +153,7 @@ void setup()
         changeOperatingMode(OperatingMode::Error);
     }
 
+    // AccelGyro calibration
     accelgyro.setXAccelOffset(-2810);
     accelgyro.setYAccelOffset(1547);
     accelgyro.setZAccelOffset(1507);
@@ -155,6 +164,7 @@ void setup()
     accelgyro.setFullScaleAccelRange(ACCEL_RANGE);
     accelgyro.setFullScaleGyroRange(GYRO_RANGE);
 
+    // Define vertical acceleration vector.
 #ifdef ACCEL_X_AXIS_DOWN
     av = &ax;
 #elif defined(ACCEL_Y_AXIS_DOWN)
@@ -181,7 +191,7 @@ void setup()
 
     if (SD.exists("ROCKET_1.txt"))
     {
-        // If file already exists, wait for continuation confirmation before deleting file to prevent data loss.        
+        // If file already exists, wait for continuation confirmation by button press before deleting file to prevent data loss.        
         changeStatusLed(HIGH, HIGH, LOW);
 
         while(!digitalRead(PUSHBUTTON_PIN)){
@@ -194,6 +204,7 @@ void setup()
 
     logFile = SD.open("ROCKET_1.txt", FILE_WRITE);
 
+    // Data headings
     logFile.println("t;ax;ay;az;gx;gy;gz;v;h");
     logFile.println("ms;cm/s^2;cm/s^2;cm/s^2;deg/s;deg/s;deg/s;cm/s;m");
 
@@ -233,7 +244,7 @@ void loop()
     switch (currentMode)
     {
     case Standby:
-        // Process
+        // Do nothing
         break;
     case Ready:
     case Flight:
@@ -280,11 +291,13 @@ void loop()
         // Code below this line is only for "Flight" mode, so break if not in "Flight" mode.
         if(currentMode == OperatingMode::Ready) break;
 
+        // Set max altitude measured.
         if (altitude > maxAltitude)
         {
             maxAltitude = altitude;
         }
 
+        // Set max vertical velocity measured.
         if (velocity > maxVelocity)
         {
             maxVelocity = velocity;
@@ -396,9 +409,7 @@ void AccelGyroMeanReadings()
     {
         accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
-        /** Convert raw acceleration to cm/s^2
-         * 
-         */
+        /** Convert raw acceleration to cm/s^2 **/
         ax = int16_t(ax / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY * 100);
         ay = int16_t(ay / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY * 100);
         az = int16_t(az / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY * 100);
