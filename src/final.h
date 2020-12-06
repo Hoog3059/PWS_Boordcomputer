@@ -191,7 +191,11 @@ void setup()
 
     if (SD.exists("ROCKET_1.txt"))
     {
+<<<<<<< HEAD
         // If file already exists, wait for continuation confirmation by button press before deleting file to prevent data loss.
+=======
+        // If file already exists, wait for continuation confirmation by button press before deleting file to prevent data loss.        
+>>>>>>> 1937a8692fe7672b8b0731d69d8e9b9ae9a03ed5
         changeStatusLed(HIGH, HIGH, LOW);
 
         while (!digitalRead(PUSHBUTTON_PIN))
