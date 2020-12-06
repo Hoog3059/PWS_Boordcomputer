@@ -54,9 +54,9 @@
 ///////////////////////////////////   CONFIGURATION   /////////////////////////////
 
 /** Defines which axis forms a right angle with the ground (is "down"). */
-#define ACCEL_X_AXIS_DOWN
+//#define ACCEL_X_AXIS_DOWN
 //#define ACCEL_Y_AXIS_DOWN
-//#define ACCEL_Z_AXIS_DOWN
+#define ACCEL_Z_AXIS_DOWN
 
 /* Accel range
  * 0 = +/- 2g
@@ -480,7 +480,7 @@ bool calibration()
         if (abs(int(16384 / pow(2, ACCEL_RANGE)) - mean_az) <= acel_deadzone)
             ready++;
         else
-            az_offset = az_offset + (16int(16384 / pow(2, ACCEL_RANGE))384 - mean_az) / acel_deadzone;
+            az_offset = az_offset + (int(16384 / pow(2, ACCEL_RANGE)) - mean_az) / acel_deadzone;
 #endif
 
         if (abs(mean_gx) <= giro_deadzone)
