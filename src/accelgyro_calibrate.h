@@ -54,9 +54,9 @@
 ///////////////////////////////////   CONFIGURATION   /////////////////////////////
 
 /** Defines which axis forms a right angle with the ground (is "down"). */
-//#define ACCEL_X_AXIS_DOWN
+#define ACCEL_X_AXIS_DOWN
 //#define ACCEL_Y_AXIS_DOWN
-#define ACCEL_Z_AXIS_DOWN
+//#define ACCEL_Z_AXIS_DOWN
 
 /* Accel range
  * 0 = +/- 2g

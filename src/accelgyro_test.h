@@ -110,7 +110,7 @@ bool parachuteDeployed = false;
 
 #pragma region TRIGGERS
 // Some triggers are commented out because these are disabled.
-// They can be re-enabled by uncommenting the triggers and question and the checks in question on line 
+// They can be re-enabled by uncommenting the triggers and question and the checks in question on line
 
 /** Launch trigger thresholds **/
 // In meters
@@ -132,7 +132,7 @@ unsigned long startTime;
 void changeOperatingMode(OperatingMode mode);
 void changeStatusLed(int red, int green, int blue);
 void takeSensorReadings();
-void AccelGyroReadSensors();
+void AccelGyroMeanReadings();
 void bmpCalibrate();
 
 void setup()
@@ -405,13 +405,14 @@ void takeSensorReadings()
     altitude = bmp.readAltitude(bmpSeaLevel);
 
     // Accelgyro
-    AccelGyroReadSensors();
+    AccelGyroMeanReadings();
 
     // Correct for gravity
     (*av) = int16_t((*av) - (GRAVITY * 100));
 }
 
-void AccelGyroReadSensors()
+#ifdef NO_MEAN
+void AccelGyroMeanReadings()
 {
     accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
@@ -424,9 +425,51 @@ void AccelGyroReadSensors()
     gx = int16_t(gx / (131.0 / pow(2, GYRO_RANGE)));
     gy = int16_t(gy / (131.0 / pow(2, GYRO_RANGE)));
     gz = int16_t(gz / (131.0 / pow(2, GYRO_RANGE)));
-
-    delay(10);
 }
+#else
+void AccelGyroMeanReadings()
+{
+    long buff_ax = 0;
+    long buff_ay = 0;
+    long buff_az = 0;
+    long buff_gx = 0;
+    long buff_gy = 0;
+    long buff_gz = 0;
+
+    for (size_t i = 0; i < ACCELGYRO_SAMPLE_MEAN; i++)
+    {
+        accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
+
+        /** Convert raw acceleration to cm/s^2 **/
+        ax = int16_t(ax / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY * 100);
+        ay = int16_t(ay / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY * 100);
+        az = int16_t(az / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY * 100);
+
+        buff_ax += ax;
+        buff_ay += ay;
+        buff_az += az;
+
+        // Angular velocity in °/s
+        gx = int16_t(gx / (131.0 / pow(2, GYRO_RANGE)));
+        gy = int16_t(gy / (131.0 / pow(2, GYRO_RANGE)));
+        gz = int16_t(gz / (131.0 / pow(2, GYRO_RANGE)));
+
+        buff_gx += gx;
+        buff_gy += gy;
+        buff_gz += gz;
+
+        delay(2);
+    }
+
+    ax = buff_ax / ACCELGYRO_SAMPLE_MEAN;
+    ay = buff_ay / ACCELGYRO_SAMPLE_MEAN;
+    az = buff_az / ACCELGYRO_SAMPLE_MEAN;
+
+    gx = buff_gx / ACCELGYRO_SAMPLE_MEAN;
+    gy = buff_gy / ACCELGYRO_SAMPLE_MEAN;
+    gz = buff_gz / ACCELGYRO_SAMPLE_MEAN;
+}
+#endif
 
 // Calibration for the BMP280
 void bmpCalibrate()
