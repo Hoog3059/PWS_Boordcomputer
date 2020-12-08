@@ -109,15 +109,18 @@ bool parachuteDeployed = false;
 #pragma endregion
 
 #pragma region TRIGGERS
+// Some triggers are commented out because these are disabled.
+// They can be re-enabled by uncommenting the triggers and question and the checks in question on line 
+
 /** Launch trigger thresholds **/
 // In meters
-#define LAUNCH_ALTITUDE_TRIGGER_THRESHOLD 5
+// #define LAUNCH_ALTITUDE_TRIGGER_THRESHOLD 5
 // In cm/s^2
 #define LAUNCH_ACCELERATION_TRIGGER_THRESHOLD 500
 
 /** Parachute deploy trigger tresholds */
 // In meters
-#define PARACHUTE_ALTITUDE_TRIGGER_THRESHOLD 5
+// #define PARACHUTE_ALTITUDE_TRIGGER_THRESHOLD 5
 // In cm/s
 #define PARACHUTE_VELOCITY_TRIGGER_THRESHOLD 100
 #pragma endregion
@@ -261,8 +264,10 @@ void loop()
         else if (currentMode == OperatingMode::Ready)
         {
             // Check if launch detected
-            if (/*altitude > LAUNCH_ALTITUDE_TRIGGER_THRESHOLD || */ (*av) >= LAUNCH_ACCELERATION_TRIGGER_THRESHOLD)
+            // Disabled check: if (altitude > LAUNCH_ALTITUDE_TRIGGER_THRESHOLD || (*av) >= LAUNCH_ACCELERATION_TRIGGER_THRESHOLD)
+            if ((*av) >= LAUNCH_ACCELERATION_TRIGGER_THRESHOLD)
             {
+                logFile.println("######## LAUNCH DETECTED ########");
                 changeOperatingMode(OperatingMode::Flight);
                 velocity = velocity + (*av) * double(time - previousTime) / 1000.0;
             }
@@ -313,14 +318,21 @@ void loop()
             {
                 parachuteServo.write(10);
                 parachuteDeployed = true;
+
+                logFile.println("######## PARACHUTE DEPLOYED ########");
             }
 
-            /*
+            // Allows for parachute trigger on altitude drop measured by barometer.
+            // Uncomment to enable.
+            /*            
             if (maxAltitude - altitude >= PARACHUTE_ALTITUDE_TRIGGER_THRESHOLD)
             {
                 parachuteServo.write(10);
                 parachuteDeployed = true;
-            }*/
+
+                logFile.println("######## PARACHUTE DEPLOYED ########");
+            }
+            */
         }
         break;
     case Error:
