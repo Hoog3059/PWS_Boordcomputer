@@ -66,7 +66,7 @@ MPU6050 accelgyro;
  * 2 = +/- 1000 °/sec
  * 3 = +/- 2000 °/sec
  */
-#define GYRO_RANGE 3
+#define GYRO_RANGE 0
 
 /** Number of measurements to mean for more accurate measurement. */
 #define ACCELGYRO_SAMPLE_MEAN 20

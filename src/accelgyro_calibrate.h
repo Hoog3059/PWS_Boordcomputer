@@ -58,14 +58,6 @@
 //#define ACCEL_Y_AXIS_DOWN
 //#define ACCEL_Z_AXIS_DOWN
 
-/* Accel range
- * 0 = +/- 2g
- * 1 = +/- 4g
- * 2 = +/- 8g
- * 3 = +/- 16g
- */
-#define ACCEL_RANGE 0
-
 //Change this 3 variables if you want to fine tune the skecth to your needs.
 int buffersize = 1000;        //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)
 int discardfirstmeas = 100;   // Amount of initial measurements to be discarded
@@ -152,7 +144,7 @@ void setup()
 
     // set the fll scale range of the gyro- and accelerometer respectively
     accelgyro.setFullScaleGyroRange(0);            //0: 250deg/s | 1: 500deg/s | 2: 1000deg/s | 3: 2000deg/s
-    accelgyro.setFullScaleAccelRange(ACCEL_RANGE); //0: 2g | 1: 4g | 2: 8g | 3: 16g
+    accelgyro.setFullScaleAccelRange(0); //0: 2g | 1: 4g | 2: 8g | 3: 16g
 
     // Get config from EEPROM if there is one
     // or initialise value with default ones set in StoreStruct
@@ -409,8 +401,8 @@ bool calibration()
 {
     ax_offset = -mean_ax / accel_offset_divisor;
     ay_offset = -mean_ay / accel_offset_divisor;
-    //az_offset=-mean_az/accel_offset_divisor;
-    //az_offset = (16384 - mean_az) / accel_offset_divisor;
+    az_offset = -mean_az / accel_offset_divisor;
+
 #ifdef ACCEL_X_AXIS_DOWN
     ax_offset = (int(16384 / pow(2, ACCEL_RANGE)) - mean_ax) / accel_offset_divisor;
 #elif defined(ACCEL_Y_AXIS_DOWN)
