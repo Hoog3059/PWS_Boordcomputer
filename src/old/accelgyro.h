@@ -7,6 +7,7 @@
 #pragma region AccelGyro
 
 MPU6050 accelgyro;
+bool accelgyroError = false;
 
 #define GRAVITY 9.806
 
@@ -57,6 +58,7 @@ void setup()
 #endif
 
     Wire.begin();
+    Wire.setWireTimeout(2500);
     Serial.begin(115200);
     accelgyro.initialize();
 
@@ -110,6 +112,13 @@ void loop()
 
 void takeSensorReadings()
 { // Accelgyro
+
+    accelgyroError = !accelgyro.testConnection();
+
+    if(accelgyroError){
+        accelgyro.initialize();
+    }
+
     AccelGyroMeanReadings();
 
     // Correct for gravity
