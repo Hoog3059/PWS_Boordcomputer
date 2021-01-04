@@ -53,10 +53,12 @@
 #define DEBUGVERBOSE
 ///////////////////////////////////   CONFIGURATION   /////////////////////////////
 
+#define ACCEL_RANGE 0
+
 /** Defines which axis forms a right angle with the ground (is "down"). */
-#define ACCEL_X_AXIS_DOWN
+//#define ACCEL_X_AXIS_DOWN
 //#define ACCEL_Y_AXIS_DOWN
-//#define ACCEL_Z_AXIS_DOWN
+#define ACCEL_Z_AXIS_DOWN
 
 //Change this 3 variables if you want to fine tune the skecth to your needs.
 int buffersize = 1000;        //Amount of readings used to average, make it higher to get more precision but sketch will be slower  (default:1000)

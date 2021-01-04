@@ -68,9 +68,6 @@ MPU6050 accelgyro;
  */
 #define GYRO_RANGE 0
 
-/** Number of measurements to mean for more accurate measurement. */
-#define ACCELGYRO_SAMPLE_MEAN 20
-
 /** Defines which axis forms a right angle with the ground */
 //#define ACCEL_X_AXIS_DOWN
 //#define ACCEL_Y_AXIS_DOWN
@@ -110,7 +107,7 @@ bool parachuteDeployed = false;
 
 #pragma region TRIGGERS
 // Some triggers are commented out because these are disabled.
-// They can be re-enabled by uncommenting the triggers and question and the checks in question on line 
+// They can be re-enabled by uncommenting the triggers and question and the checks in question on line
 
 /** Launch trigger thresholds **/
 // In meters
@@ -144,11 +141,12 @@ void setup()
     pinMode(LED_GREEN_PIN, OUTPUT);
     pinMode(LED_BLUE_PIN, OUTPUT);
 
-    changeStatusLed(HIGH, LOW, HIGH);
+    changeStatusLed(HIGH, LOW, HIGH); // Purple
+
+    Wire.begin();
+    Wire.setWireTimeout(2500);
 
     // AccelGyro initialisation
-    Wire.begin();
-
     accelgyro.initialize();
 
     if (!accelgyro.testConnection())
@@ -157,12 +155,12 @@ void setup()
     }
 
     // AccelGyro calibration
-    accelgyro.setXAccelOffset(-2810);
-    accelgyro.setYAccelOffset(1547);
-    accelgyro.setZAccelOffset(1507);
-    accelgyro.setXGyroOffset(51);
-    accelgyro.setYGyroOffset(27);
-    accelgyro.setZGyroOffset(-82);
+    accelgyro.setXAccelOffset(-2771);
+    accelgyro.setYAccelOffset(1622);
+    accelgyro.setZAccelOffset(1453);
+    accelgyro.setXGyroOffset(48);
+    accelgyro.setYGyroOffset(22);
+    accelgyro.setZGyroOffset(-70);
 
     accelgyro.setFullScaleAccelRange(ACCEL_RANGE);
     accelgyro.setFullScaleGyroRange(GYRO_RANGE);
@@ -192,33 +190,70 @@ void setup()
         changeOperatingMode(OperatingMode::Error);
     }
 
+    /** Defines whether flight computer should assume an accidental reset has occured.
+     * If true, recovery sequence shall be initiated on boot. */
+    bool recoverAfterReset = true;
+
+    // Check if file exists.
+    // If yes, check to see if recovery should be initiated.
+    // If no, boot normally.
     if (SD.exists("ROCKET_1.txt"))
     {
-        // If file already exists, wait for continuation confirmation by button press before deleting file to prevent data loss.
-        changeStatusLed(HIGH, HIGH, LOW);
+        changeStatusLed(HIGH, HIGH, LOW); // Yellow
 
-        while (!digitalRead(PUSHBUTTON_PIN))
+        int counter = 0;
+
+        // Check if pushbutton is being held for 2000ms.
+        // If yes, delete file and boot normally.
+        // If no, initiate recovery sequence.
+        while (digitalRead(PUSHBUTTON_PIN))
         {
-            delay(1000);
+            counter += 1;
+            delay(10);
+
+            // If button is held for long enough, delete file.
+            if (counter >= 200)
+            {
+                changeStatusLed(HIGH, LOW, HIGH); // Purple
+                delay(2000);
+                recoverAfterReset = false;
+                SD.remove("ROCKET_1.txt");
+                break;
+            }
         }
-        changeStatusLed(HIGH, LOW, HIGH);
-        delay(2000);
-        SD.remove("ROCKET_1.txt");
+    }
+    else
+    {
+        recoverAfterReset = false;
     }
 
     logFile = SD.open("ROCKET_1.txt", FILE_WRITE);
-
-    // Data headings
-    logFile.println("t;ax;ay;az;gx;gy;gz;v;h");
-    logFile.println("ms;cm/s^2;cm/s^2;cm/s^2;deg/s;deg/s;deg/s;cm/s;m");
 
     if (!logFile)
     {
         changeOperatingMode(OperatingMode::Error);
     }
 
-    // After succesful setup, go into standby.
-    changeOperatingMode(OperatingMode::Standby);
+    if (recoverAfterReset)
+    {
+        // Recovery sequence
+        logFile.println("######## RECOVER AFTER RESET ########");
+        logFile.close();
+
+        changeOperatingMode(OperatingMode::Ready);
+        changeOperatingMode(OperatingMode::Flight);
+    }
+    else
+    {
+        // Normal boot
+
+        // Data headings
+        logFile.println("t;ax;ay;az;gx;gy;gz;v;h;accelStatus;baroStatus");
+        logFile.println("ms;cm/s^2;cm/s^2;cm/s^2;deg/s;deg/s;deg/s;cm/s;m;;");
+
+        // After succesful setup, go into standby.
+        changeOperatingMode(OperatingMode::Standby);
+    }
 }
 
 void loop()
@@ -226,7 +261,7 @@ void loop()
     // Check for button press. Change current mode.
     if (digitalRead(PUSHBUTTON_PIN))
     {
-        changeStatusLed(LOW, LOW, LOW);
+        changeStatusLed(LOW, LOW, LOW); // Off
 
         delay(1000);
 
@@ -293,7 +328,11 @@ void loop()
         logFile.print(";");
         logFile.print(velocity);
         logFile.print(";");
-        logFile.println(altitude);
+        logFile.print(altitude);
+        logFile.print(";");
+        logFile.print(accelgyro.testConnection() ? "1" : "0");
+        logFile.print(";");
+        logFile.println(bmp.getStatus() == 12 || bmp.getStatus() == 4 ? "1" : "0");
 
         // Code below this line is only for "Flight" mode, so break if not in "Flight" mode.
         if (currentMode == OperatingMode::Ready)
@@ -351,7 +390,7 @@ void changeOperatingMode(OperatingMode mode)
     switch (mode)
     {
     case Standby:
-        changeStatusLed(LOW, LOW, HIGH);
+        changeStatusLed(LOW, LOW, HIGH); // Blue
 
         logFile.close();
 
@@ -375,18 +414,16 @@ void changeOperatingMode(OperatingMode mode)
                         Adafruit_BMP280::FILTER_X16,
                         Adafruit_BMP280::STANDBY_MS_1);
 
-        delay(1000);
-
         bmpCalibrate();
 
-        changeStatusLed(LOW, HIGH, LOW);
+        changeStatusLed(LOW, HIGH, LOW); // Green
         startTime = millis();
         break;
     case Flight:
-        changeStatusLed(LOW, LOW, LOW);
+        changeStatusLed(LOW, LOW, LOW); // Off
         break;
     case Error:
-        changeStatusLed(HIGH, LOW, LOW);
+        changeStatusLed(HIGH, LOW, LOW); // Red
         while (true)
             ;
     }
@@ -402,6 +439,18 @@ void changeStatusLed(int red, int green, int blue)
 void takeSensorReadings()
 {
     // Barometer
+    int barometerStatus = bmp.getStatus();
+    if (barometerStatus != 12 && barometerStatus != 4)
+    {
+        if (bmp.begin(0x76))
+        {
+            bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,
+                            Adafruit_BMP280::SAMPLING_NONE,
+                            Adafruit_BMP280::SAMPLING_X16,
+                            Adafruit_BMP280::FILTER_X16,
+                            Adafruit_BMP280::STANDBY_MS_1);
+        }
+    }
     altitude = bmp.readAltitude(bmpSeaLevel);
 
     // Accelgyro
@@ -424,8 +473,6 @@ void AccelGyroReadSensors()
     gx = int16_t(gx / (131.0 / pow(2, GYRO_RANGE)));
     gy = int16_t(gy / (131.0 / pow(2, GYRO_RANGE)));
     gz = int16_t(gz / (131.0 / pow(2, GYRO_RANGE)));
-
-    delay(10);
 }
 
 // Calibration for the BMP280
