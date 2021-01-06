@@ -124,12 +124,10 @@ void setup()
     Wire.setWireTimeout(2500);
 
     // AccelGyro initialisation
-    Serial.println("1");
+    Serial.println("Initialising accelerometer.");
     delay(10);
 
     accelgyro.initialize();
-
-    Serial.println("2");
 
     if (!accelgyro.testConnection())
     {
@@ -137,7 +135,7 @@ void setup()
         Serial.println("Accel error");
     }
 
-    Serial.println("3");
+    Serial.println("Setting accelerometer offsets and setting range.");
 
     // AccelGyro calibration
     accelgyro.setXAccelOffset(-2771);
@@ -159,11 +157,13 @@ void setup()
     av = &az;
 #endif
 
+    Serial.println("Initialising servo.");
+
     // Servo initialisation
     parachuteServo.attach(PARACHUTE_SERVO_PIN);
     parachuteServo.write(170);
 
-    Serial.println("4");
+    Serial.println("Initialising barometer.");
 
     // Barometer initialisation
     if (!bmp.begin(0x76))
@@ -172,7 +172,7 @@ void setup()
         Serial.println("Baro error");
     }
 
-    Serial.println("5");
+    Serial.println("Initialising SD-cardreader");
 
     // SD initialisation
     if (!SD.begin(SD_CHIP_SELECT_PIN))
@@ -181,10 +181,11 @@ void setup()
         Serial.println("SD error");
     }
 
-    Serial.println("6");
+    Serial.println("Starting sensor test.");
 
     // After succesful setup, go into standby.
     changeOperatingMode(OperatingMode::Standby);
+    changeOperatingMode(OperatingMode::Ready);
 }
 
 void loop()
@@ -225,12 +226,30 @@ void changeOperatingMode(OperatingMode mode)
 {
     switch (mode)
     {
+    case Standby:
+        changeStatusLed(LOW, LOW, HIGH); // Blue
+
+        bmp.setSampling(Adafruit_BMP280::MODE_SLEEP,
+                        Adafruit_BMP280::SAMPLING_NONE,
+                        Adafruit_BMP280::SAMPLING_NONE,
+                        Adafruit_BMP280::FILTER_X16,
+                        Adafruit_BMP280::STANDBY_MS_1000);
+        break;
+    case Ready:
+        bmp.setSampling(Adafruit_BMP280::MODE_NORMAL,
+                        Adafruit_BMP280::SAMPLING_NONE,
+                        Adafruit_BMP280::SAMPLING_X16,
+                        Adafruit_BMP280::FILTER_X16,
+                        Adafruit_BMP280::STANDBY_MS_1);
+
+        bmpCalibrate();
+
+        changeStatusLed(LOW, HIGH, LOW); // Green
+        break;
     case Error:
-        changeStatusLed(HIGH, LOW, LOW);
+        changeStatusLed(HIGH, LOW, LOW); // Red
         while (true)
             ;
-    default:
-        break;
     }
 }
 
