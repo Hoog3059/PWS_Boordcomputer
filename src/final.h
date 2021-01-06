@@ -4,7 +4,7 @@
 #include <SD.h>
 #include <Servo.h>           // https://github.com/arduino-libraries/Servo
 #include <I2Cdev.h>          // https://github.com/jrowberg/i2cdevlib
-#include <MPU6050.h>         // https://github.com/pkourany/I2CDEV_MPU6050
+#include <MPU6050.h>         // https://github.com/jrowberg/i2cdevlib
 #include <Adafruit_BMP280.h> // https://github.com/adafruit/Adafruit_BMP280_Library
 
 /** Defines different operating modes for the flightcomputer.
@@ -258,23 +258,31 @@ void setup()
 
 void loop()
 {
-    // Check for button press. Change current mode.
-    if (digitalRead(PUSHBUTTON_PIN))
+    int counter = 0;
+    // If button is held for 1000ms, change mode.
+    while (digitalRead(PUSHBUTTON_PIN))
     {
-        changeStatusLed(LOW, LOW, LOW); // Off
+        counter += 1;
+        delay(1);
 
-        delay(1000);
-
-        switch (currentMode)
+        if (counter > 1000)
         {
-        case Standby:
-            changeOperatingMode(OperatingMode::Ready);
-            break;
-        case Ready:
-            changeOperatingMode(OperatingMode::Standby);
-            break;
-        case Flight:
-            changeOperatingMode(OperatingMode::Standby);
+            changeStatusLed(HIGH, LOW, HIGH); // Purple
+
+            delay(1000);
+
+            switch (currentMode)
+            {
+            case Standby:
+                changeOperatingMode(OperatingMode::Ready);
+                break;
+            case Ready:
+                changeOperatingMode(OperatingMode::Standby);
+                break;
+            case Flight:
+                changeOperatingMode(OperatingMode::Standby);
+                break;
+            }
             break;
         }
     }
@@ -311,7 +319,7 @@ void loop()
         previousTime = time;
 
         // Log
-        // Format:  time;ax;ay;az;gx;gy;gz;velocity;barAlt
+        // Format:  t;ax;ay;az;gx;gy;gz;v;h;accelStatus;baroStatus
         logFile.print(millis() - startTime);
         logFile.print(";");
         logFile.print(ax);
@@ -440,6 +448,8 @@ void takeSensorReadings()
 {
     // Barometer
     int barometerStatus = bmp.getStatus();
+    // If barometerStatus is not 12 or 4, then the barometer has had an error.
+    // The following code tries to restart the barometer.
     if (barometerStatus != 12 && barometerStatus != 4)
     {
         if (bmp.begin(0x76))
