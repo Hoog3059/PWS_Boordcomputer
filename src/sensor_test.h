@@ -64,9 +64,6 @@ MPU6050 accelgyro;
  */
 #define GYRO_RANGE 3
 
-/** Number of measurements to mean for more accurate measurement. */
-#define ACCELGYRO_SAMPLE_MEAN 20
-
 /** Defines which axis forms a right angle with the ground */
 //#define ACCEL_X_AXIS_DOWN
 //#define ACCEL_Y_AXIS_DOWN
@@ -79,8 +76,6 @@ int16_t gx, gy, gz;
 // Vertical acceleration (pointer).
 int16_t *av;
 
-// Δt used for integration.
-unsigned long time;
 unsigned long previousTime;
 #pragma endregion
 
@@ -96,8 +91,6 @@ File logFile;
 #define PARACHUTE_SERVO_PIN 9
 
 Servo parachuteServo;
-
-bool parachuteDeployed = false;
 #pragma endregion
 
 /** Function declarations **/
