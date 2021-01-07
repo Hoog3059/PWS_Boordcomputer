@@ -475,9 +475,9 @@ void AccelGyroReadSensors()
     accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
 
     /** Convert raw acceleration to cm/s^2 **/
-    ax = int16_t(ax / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY * 100);
-    ay = int16_t(ay / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY * 100);
-    az = int16_t(az / (16348.0 / pow(2, ACCEL_RANGE)) * GRAVITY * 100);
+    ax = int16_t(ax / (16384.0 / pow(2, ACCEL_RANGE)) * GRAVITY * 100);
+    ay = int16_t(ay / (16384.0 / pow(2, ACCEL_RANGE)) * GRAVITY * 100);
+    az = int16_t(az / (16384.0 / pow(2, ACCEL_RANGE)) * GRAVITY * 100);
 
     // Angular velocity in °/s
     gx = int16_t(gx / (131.0 / pow(2, GYRO_RANGE)));
