@@ -187,10 +187,12 @@ void loop()
     if (digitalRead(PUSHBUTTON_PIN))
     {
         changeStatusLed(LOW, HIGH, LOW);
-    }else{
+    }
+    else
+    {
         changeStatusLed(LOW, LOW, HIGH);
     }
-    
+
     takeSensorReadings();
 
     Serial.print(millis() - previousTime);
@@ -210,7 +212,7 @@ void loop()
     Serial.print(bmp.getStatus());
     Serial.print("      ");
     Serial.print(bmp.readPressure());
-    Serial.println("   Pa   ");    
+    Serial.println("   Pa   ");
     previousTime = millis();
 }
 

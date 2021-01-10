@@ -113,7 +113,7 @@ bool parachuteDeployed = false;
 // In meters
 // #define LAUNCH_ALTITUDE_TRIGGER_THRESHOLD 5
 // In cm/s^2
-#define LAUNCH_ACCELERATION_TRIGGER_THRESHOLD 500
+#define LAUNCH_ACCELERATION_TRIGGER_THRESHOLD 750
 
 /** Parachute deploy trigger tresholds */
 // In meters
@@ -341,6 +341,8 @@ void loop()
         logFile.print(accelgyro.testConnection() ? "1" : "0");
         logFile.print(";");
         logFile.println(bmp.getStatus() == 12 || bmp.getStatus() == 4 ? "1" : "0");
+
+        logFile.flush();
 
         // Code below this line is only for "Flight" mode, so break if not in "Flight" mode.
         if (currentMode == OperatingMode::Ready)
