@@ -93,6 +93,12 @@ File logFile;
 Servo parachuteServo;
 #pragma endregion
 
+/** Launch trigger thresholds **/
+// In meters
+// #define LAUNCH_ALTITUDE_TRIGGER_THRESHOLD 5
+// In cm/s^2
+#define LAUNCH_ACCELERATION_TRIGGER_THRESHOLD 750
+
 /** Function declarations **/
 void changeOperatingMode(OperatingMode mode);
 void changeStatusLed(int red, int green, int blue);
@@ -196,7 +202,7 @@ void loop()
     takeSensorReadings();
 
     Serial.print(millis() - previousTime);
-    Serial.print("   ");
+    Serial.print("   ms   ");
     Serial.print(ax);
     Serial.print("   ");
     Serial.print(ay);
@@ -212,7 +218,12 @@ void loop()
     Serial.print(bmp.getStatus());
     Serial.print("      ");
     Serial.print(bmp.readPressure());
-    Serial.println("   Pa   ");
+    Serial.print("   Pa   ");
+    if ((*av) >= LAUNCH_ACCELERATION_TRIGGER_THRESHOLD)
+    {
+        Serial.print("## LAUNCH DETECTED ##");
+    }
+    Serial.println();
     previousTime = millis();
 }
 
