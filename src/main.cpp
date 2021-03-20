@@ -3,9 +3,9 @@
 #define FINAL
 
 #ifdef ACCELGYRO_CALIBRATE
-#include "accelgyro_calibrate.h"
+#include "accelgyro_calibrate.cpp"
 #elif defined(SENSORTEST)
-#include "sensor_test.h"
+#include "sensor_test.cpp"
 #elif defined(FINAL)
-#include "final.h"
+#include "final.cpp"
 #endif

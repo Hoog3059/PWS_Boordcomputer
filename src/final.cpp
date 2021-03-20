@@ -155,12 +155,12 @@ void setup()
     }
 
     // AccelGyro calibration
-    accelgyro.setXAccelOffset(-2771);
-    accelgyro.setYAccelOffset(1622);
-    accelgyro.setZAccelOffset(1453);
-    accelgyro.setXGyroOffset(48);
-    accelgyro.setYGyroOffset(22);
-    accelgyro.setZGyroOffset(-70);
+    accelgyro.setXAccelOffset(-3222);
+    accelgyro.setYAccelOffset(1581);
+    accelgyro.setZAccelOffset(1349);
+    accelgyro.setXGyroOffset(-9);
+    accelgyro.setYGyroOffset(114);
+    accelgyro.setZGyroOffset(-51);
 
     accelgyro.setFullScaleAccelRange(ACCEL_RANGE);
     accelgyro.setFullScaleGyroRange(GYRO_RANGE);
