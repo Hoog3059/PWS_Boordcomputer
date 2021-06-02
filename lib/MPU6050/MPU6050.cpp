@@ -3274,7 +3274,6 @@ void MPU6050::CalibrateGyro(uint8_t Loops ) {
   @brief      Fully calibrate Accel from ZERO in about 6-7 Loops 600-700 readings
 */
 void MPU6050::CalibrateAccel(uint8_t Loops ) {
-
 	float kP = 0.3;
 	float kI = 20;
 	float x;
